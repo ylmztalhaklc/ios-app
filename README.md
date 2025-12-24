@@ -1,75 +1,75 @@
-# 🏥 HealthCare - Hasta Bakım Görev Yönetim Sistemi
+# 🏥 HealthCare - Patient Care Task Management System
 
-Hasta yakınları ve hasta bakıcıları arasında görev takibi, iletişim ve problem raporlama için geliştirilmiş kapsamlı sağlık yönetim platformu.
+A comprehensive healthcare management platform developed for task tracking, communication, and problem reporting between patient relatives and caregivers.
 
-## 📋 Özellikler
+## 📋 Features
 
-### 👥 Kullanıcı Rolleri
-- **Hasta Yakını (Relative)**: Görev atar, ilerleyişi takip eder, sorunları görüntüler
-- **Hasta Bakıcı (Caregiver)**: Görevleri tamamlar, problem bildirir, fotoğraf yükler
+### 👥 User Roles
+- **Patient Relative**: Assigns tasks, monitors progress, views problems
+- **Caregiver**: Completes tasks, reports problems, uploads photos
 
-### ✨ Ana Özellikler
-- 📅 **Görev Yönetimi**: Görev şablonları oluşturma, atama ve takip
-- 🔔 **Bildirimler**: Otomatik bildirim sistemi
-- 💬 **Canlı Sohbet**: Kullanıcılar arası mesajlaşma (emoji ve dosya eki desteği)
-- 📸 **Fotoğraf Belgesi**: Görev tamamlama fotoğrafı yükleme
-- ⭐ **Değerlendirme Sistemi**: Tamamlanan görevleri 1-5 yıldız ile derecelendirme
-- 💊 **İlaç Takibi**: Özel ilaç görevi tipi (görsel olarak farklılaştırılmış)
-- 🚨 **Problem Yönetimi**: 3 seviyeli (hafif/orta/ciddi) problem bildirimi
-- 📊 **İstatistikler**: Görev tamamlama oranları ve performans grafikleri
-- 🏥 **Kritik Sorun Bildirimi**: Ciddi sorunlar için otomatik Bakanlık bildirimi
+### ✨ Main Features
+- 📅 **Task Management**: Create task templates, assign and track tasks
+- 🔔 **Notifications**: Automatic notification system
+- 💬 **Live Chat**: User-to-user messaging (with emoji and file attachment support)
+- 📸 **Photo Documentation**: Upload task completion photos
+- ⭐ **Rating System**: Rate completed tasks with 1-5 stars
+- 💊 **Medication Tracking**: Special medication task type (visually differentiated)
+- 🚨 **Problem Management**: 3-level (mild/moderate/critical) problem reporting
+- 📊 **Statistics**: Task completion rates and performance charts
+- 🏥 **Critical Issue Reporting**: Automatic ministry notification for critical problems
 
-## 🛠️ Teknoloji Stack'i
+## 🛠️ Technology Stack
 
 ### Backend
 - **Framework**: FastAPI 0.115.6
-- **Veritabanı**: SQLite (SQLAlchemy ORM 2.0.36)
-- **Doğrulama**: Pydantic 2.10.5
+- **Database**: SQLite (SQLAlchemy ORM 2.0.36)
+- **Validation**: Pydantic 2.10.5
 - **Server**: Uvicorn 0.34.0
-- **Dosya İşleme**: python-multipart, aiofiles
+- **File Processing**: python-multipart, aiofiles
 
 ### Frontend
 - **Framework**: Flutter 3.9.2+
 - **State Management**: flutter_riverpod 2.6.1
-- **HTTP İstemcisi**: http 1.6.0
-- **UI Bileşenleri**:
-  - table_calendar 3.1.3 (Takvim görünümü)
-  - image_picker 1.2.1 (Fotoğraf seçme)
+- **HTTP Client**: http 1.6.0
+- **UI Components**:
+  - table_calendar 3.1.3 (Calendar view)
+  - image_picker 1.2.1 (Photo selection)
   - emoji_picker_flutter 3.1.0 (Emoji picker)
-  - cached_network_image 3.4.1 (Resim önbellekleme)
-  - shared_preferences 2.3.3 (Yerel veri saklama)
+  - cached_network_image 3.4.1 (Image caching)
+  - shared_preferences 2.3.3 (Local data storage)
 
-## 📁 Proje Yapısı
+## 📁 Project Structure
 
 ```
 HealthCare/
 ├── backend/
-│   ├── venv/                    # Python sanal ortamı
+│   ├── venv/                    # Python virtual environment
 │   │   └── app/
-│   │       ├── main.py          # FastAPI ana uygulama
-│   │       ├── database.py      # Veritabanı bağlantısı
-│   │       ├── models.py        # SQLAlchemy modelleri
-│   │       ├── schemas.py       # Pydantic şemaları
-│   │       ├── crud.py          # Veritabanı işlemleri
-│   │       └── routers/         # API endpoint'leri
-│   │           ├── auth.py      # Kimlik doğrulama
-│   │           ├── tasks.py     # Görev yönetimi
-│   │           ├── messages.py  # Mesajlaşma
+│   │       ├── main.py          # FastAPI main application
+│   │       ├── database.py      # Database connection
+│   │       ├── models.py        # SQLAlchemy models
+│   │       ├── schemas.py       # Pydantic schemas
+│   │       ├── crud.py          # Database operations
+│   │       └── routers/         # API endpoints
+│   │           ├── auth.py      # Authentication
+│   │           ├── tasks.py     # Task management
+│   │           ├── messages.py  # Messaging
 │   │           ├── notifications.py
 │   │           ├── statistics.py
-│   │           └── uploads.py   # Fotoğraf yükleme
-│   ├── uploads/                 # Yüklenen görev fotoğrafları
-│   ├── healthcare.db            # SQLite veritabanı
+│   │           └── uploads.py   # Photo upload
+│   ├── uploads/                 # Uploaded task photos
+│   ├── healthcare.db            # SQLite database
 │   └── requirements.txt
 │
 └── frontend/
     └── healthcare_app/
         ├── lib/
-        │   ├── main.dart        # Uygulama giriş noktası
+        │   ├── main.dart        # Application entry point
         │   ├── core/
-        │   │   ├── api_client.dart  # API HTTP istemcisi
-        │   │   └── models.dart      # Dart veri modelleri
-        │   └── pages/           # UI sayfaları
+        │   │   ├── api_client.dart  # API HTTP client
+        │   │   └── models.dart      # Dart data models
+        │   └── pages/           # UI pages
         │       ├── login_page.dart
         │       ├── caregiver_home_page.dart
         │       ├── caregiver_tasks_page.dart
@@ -78,170 +78,170 @@ HealthCare/
         │       ├── chat_page.dart
         │       ├── conversations_list_page.dart
         │       └── notifications_page.dart
-        ├── pubspec.yaml         # Flutter bağımlılıkları
+        ├── pubspec.yaml         # Flutter dependencies
         └── analysis_options.yaml
 ```
 
-## 🚀 Kurulum ve Çalıştırma
+## 🚀 Installation and Setup
 
-### Gereksinimler
+### Requirements
 - Python 3.8+
 - Flutter 3.9.2+
 - Dart SDK 3.9.2+
 
-### Backend Kurulumu
+### Backend Setup
 
-1. Backend dizinine gidin:
+1. Navigate to the backend directory:
 ```bash
 cd backend
 ```
 
-2. Python sanal ortamını oluşturun ve etkinleştirin:
+2. Create and activate Python virtual environment:
 ```bash
 python -m venv venv
 .\venv\Scripts\Activate.ps1  # Windows PowerShell
-# veya
+# or
 source venv/bin/activate  # Linux/Mac
 ```
 
-3. Gerekli paketleri yükleyin:
+3. Install required packages:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Veritabanı dosyasının doğru konumda olduğundan emin olun:
-- `healthcare.db` dosyası `backend/` dizininde olmalıdır
-- İlk çalıştırmada otomatik oluşturulacaktır
+4. Ensure the database file is in the correct location:
+- The `healthcare.db` file should be in the `backend/` directory
+- It will be automatically created on first run
 
-5. Backend sunucusunu başlatın:
+5. Start the backend server:
 ```bash
 cd venv
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Backend şimdi http://127.0.0.1:8000 adresinde çalışıyor.
-- API Dokümantasyonu: http://127.0.0.1:8000/docs (Swagger UI)
+Backend is now running at http://127.0.0.1:8000
+- API Documentation: http://127.0.0.1:8000/docs (Swagger UI)
 
-### Frontend Kurulumu
+### Frontend Setup
 
-1. Frontend dizinine gidin:
+1. Navigate to the frontend directory:
 ```bash
 cd frontend/healthcare_app
 ```
 
-2. Flutter bağımlılıklarını yükleyin:
+2. Install Flutter dependencies:
 ```bash
 flutter pub get
 ```
 
-3. Uygulamayı çalıştırın:
+3. Run the application:
 
-**Chrome (Web) için:**
+**For Chrome (Web):**
 ```bash
 flutter run -d chrome
 ```
 
-**Android için:**
+**For Android:**
 ```bash
 flutter run -d <device_id>
 ```
 
-**iOS için (Mac gerekli):**
+**For iOS (Mac required):**
 ```bash
 flutter run -d <device_id>
 ```
 
-### Test Kullanıcıları
+### Test Users
 
-Giriş yapmak için test kullanıcı bilgileri:
+Login credentials for testing:
 
-**Hasta Yakını:**
+**Patient Relative:**
 - Email: `relative@example.com`
-- Şifre: Herhangi bir şey
+- Password: Anything
 
-**Hasta Bakıcı:**
+**Caregiver:**
 - Email: `caregiver@example.com`
-- Şifre: Herhangi bir şey
+- Password: Anything
 
-> Not: Şu an için basit email kontrolü yapılmaktadır. Production'da güvenli kimlik doğrulama implementasyonu gereklidir.
+> Note: Currently using simple email validation. Secure authentication implementation required for production.
 
-## 🎯 Kullanım Senaryoları
+## 🎯 Usage Scenarios
 
-### 1. Görev Oluşturma ve Atama (Hasta Yakını)
-1. Giriş yapın
-2. "Görev Ekle" butonuna tıklayın
-3. Görev detaylarını girin (başlık, açıklama, saat, günler)
-4. İlaç görevi için "İlaç Görevi" seçeneğini işaretleyin
-5. Kaydedin
+### 1. Task Creation and Assignment (Patient Relative)
+1. Log in
+2. Click "Add Task" button
+3. Enter task details (title, description, time, days)
+4. For medication tasks, check "Medication Task" option
+5. Save
 
-### 2. Görev Tamamlama (Hasta Bakıcı)
-1. Atanmış görevleri görüntüleyin
-2. "Başla" butonuna tıklayın
-3. Görevi tamamladıktan sonra "Tamamla" butonuna basın
-4. İsteğe bağlı olarak fotoğraf yükleyin veya fotoğrafsız tamamlayın
+### 2. Task Completion (Caregiver)
+1. View assigned tasks
+2. Click "Start" button
+3. After completing the task, press "Complete" button
+4. Optionally upload a photo or complete without photo
 
-### 3. Problem Bildirme (Hasta Bakıcı)
-1. Görev detaylarında "Sorun Bildir" butonuna tıklayın
-2. Sorun açıklamasını yazın
-3. Ciddiyet seviyesini seçin (hafif/orta/ciddi)
-4. Gönderin
-- **Ciddi sorunlar** otomatik olarak hasta yakınına bildirim gönderir ve "Bakanlığa haber verildi" mesajı gösterilir
+### 3. Problem Reporting (Caregiver)
+1. Click "Report Problem" button in task details
+2. Write problem description
+3. Select severity level (mild/moderate/critical)
+4. Submit
+- **Critical problems** automatically send notification to patient relative and display "Reported to ministry" message
 
-### 4. Görev Değerlendirme (Hasta Yakını)
-1. Tamamlanmış görevleri görüntüleyin
-2. "Değerlendir" butonuna tıklayın
-3. 1-5 yıldız verin
-4. İsteğe bağlı yorum ekleyin
+### 4. Task Rating (Patient Relative)
+1. View completed tasks
+2. Click "Rate" button
+3. Give 1-5 stars
+4. Optionally add a comment
 
-## 📊 Veritabanı Şeması
+## 📊 Database Schema
 
-### Ana Tablolar
-- **users**: Kullanıcı bilgileri (hasta_yakini, hasta_bakici)
-- **task_template**: Görev şablonları (tekrarlayan görevler için)
-- **task_instance**: Görev örnekleri (belirli tarihler için atanmış görevler)
-- **notifications**: Bildirimler
-- **messages**: Mesajlar (bire bir sohbet)
-- **conversation**: Konuşma meta verisi
+### Main Tables
+- **users**: User information (patient_relative, caregiver)
+- **task_template**: Task templates (for recurring tasks)
+- **task_instance**: Task instances (tasks assigned for specific dates)
+- **notifications**: Notifications
+- **messages**: Messages (one-to-one chat)
+- **conversation**: Conversation metadata
 
-### Önemli Kolonlar
-- `task_type`: 'normal' veya 'medication' (ilaç)
-- `completion_photo_url`: Tamamlama fotoğrafı dosya yolu
-- `rating`: Görev değerlendirmesi (1-5)
-- `review_note`: Değerlendirme yorumu
-- `critical_notified`: Kritik problem bildirimi gönderildi mi?
-- `severity`: Problem ciddiyeti (hafif/orta/ciddi)
+### Important Columns
+- `task_type`: 'normal' or 'medication'
+- `completion_photo_url`: Completion photo file path
+- `rating`: Task rating (1-5)
+- `review_note`: Rating comment
+- `critical_notified`: Was critical problem notification sent?
+- `severity`: Problem severity (mild/moderate/critical)
 
-## 🔒 Güvenlik Notları
+## 🔒 Security Notes
 
-**⚠️ Önemli**: Bu proje development aşamasındadır. Production kullanımı için:
-- JWT token bazlı kimlik doğrulama ekleyin
-- Şifreleri hash'leyin (bcrypt, argon2)
-- CORS ayarlarını spesifik domain'lere sınırlayın
-- Rate limiting ekleyin
-- Input validation güçlendirin
-- HTTPS kullanın
-- SQL injection koruması güncelleyin (SQLAlchemy ORM kullanımı devam etsin)
+**⚠️ Important**: This project is in development stage. For production use:
+- Add JWT token-based authentication
+- Hash passwords (bcrypt, argon2)
+- Restrict CORS settings to specific domains
+- Add rate limiting
+- Strengthen input validation
+- Use HTTPS
+- Update SQL injection protection (continue using SQLAlchemy ORM)
 
-## 🐛 Bilinen Sorunlar ve Geliştirme Fırsatları
+## 🐛 Known Issues and Development Opportunities
 
-- [ ] Tekrarlayan görevler UI'sı (backend hazır, frontend yok)
-- [ ] Hatırlatıcı bildirimleri (görev saatinden 15-30 dk önce)
-- [ ] Çoklu aile üyesi desteği
-- [ ] Hasta bakıcı için acil durum butonu
-- [ ] Maliyet takibi (ödemeler, masraflar)
-- [ ] Vardiya yönetimi (çoklu bakıcı)
-- [ ] Sesli mesaj desteği
-- [ ] Mesaj dosya eki UI'sı (backend hazır)
+- [ ] Recurring tasks UI (backend ready, frontend missing)
+- [ ] Reminder notifications (15-30 min before task time)
+- [ ] Multiple family member support
+- [ ] Emergency button for caregiver
+- [ ] Cost tracking (payments, expenses)
+- [ ] Shift management (multiple caregivers)
+- [ ] Voice message support
+- [ ] Message file attachment UI (backend ready)
 
-## 📝 Lisans
+## 📝 License
 
-Bu proje eğitim ve portföy amaçlı geliştirilmiştir.
+This project was developed for educational and portfolio purposes.
 
-## 👨‍💻 Geliştirici
+## 👨‍💻 Developer
 
 Talha Kılıç
 - GitHub: [ylmztalhaklc](https://github.com/ylmztalhaklc)
 
-## 📞 İletişim
+## 📞 Contact
 
-Sorular veya öneriler için GitHub Issues kullanabilirsiniz.
+You can use GitHub Issues for questions or suggestions.
