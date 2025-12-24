@@ -1,0 +1,285 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../core/api_client.dart';
+import '../core/models.dart';
+import '../main.dart';
+import 'notifications_page.dart';
+import 'login_page.dart';
+
+// Bu dosya: Hasta bakıcı (caregiver) için görev listesini gösterir.
+// - Kullanıcının atandığı görevleri getirir ve listeler.
+// - Görevlerin durumunu ('pending','done','problem') değiştirmeye izin verir.
+// - Bildirim sayacı ve çıkış butonu içerir.
+
+class CaregiverTasksPage extends ConsumerStatefulWidget {
+  const CaregiverTasksPage({super.key});
+
+  @override
+  ConsumerState<CaregiverTasksPage> createState() =>
+      _CaregiverTasksPageState();
+}
+
+class _CaregiverTasksPageState extends ConsumerState<CaregiverTasksPage> {
+  Future<void> _refresh() async {
+    // Basit yeniden yükleme tetikleyicisi: widget'ı yeniden çizdirir
+    setState(() {});
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'done':
+        return Colors.green.shade100;
+      case 'problem':
+        return Colors.red.shade100;
+      case 'pending':
+        return Colors.yellow.shade100;
+      default:
+        return Colors.grey.shade200;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Ana build: kullanıcıyı alır, görevleri getirir ve liste olarak gösterir
+    final api = ref.read(apiClientProvider);
+    final user = ref.watch(currentUserProvider);
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text('Kullanıcı bulunamadı')),
+      );
+    }
+
+    // Tarih formatı
+    final df = DateFormat('dd.MM.yyyy HH:mm');
+
+    return Scaffold(
+      appBar: AppBar(
+        // Uygulama başlığı ve bildirim ikonu (unread sayacı)
+        title: Text('Hasta Bakıcı - ${user.fullName}'),
+        actions: [
+          FutureBuilder<List<NotificationModel>>(
+            future: api.getNotifications(user.id),
+            builder: (context, snapshot) {
+              final notifs = snapshot.data ?? [];
+              final unread =
+                  notifs.where((n) => n.isRead == false).length;
+
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    // Bildirim sayfasına gitme
+                    icon: const Icon(Icons.notifications),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsPage(),
+                        ),
+                      );
+                      setState(() {});
+                    },
+                  ),
+                  if (unread > 0)
+                    Positioned(
+                      right: 8,
+                      top: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          unread.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      // Görev listesini API'den alan FutureBuilder
+      body: FutureBuilder<List<TaskInstance>>(
+        future: api.getAssignedTasks(user.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Hata: ${snapshot.error}'));
+          }
+          // Tüm görevler
+          final allTasks = snapshot.data ?? [];
+          if (allTasks.isEmpty) {
+            return const Center(child: Text('Görev bulunmuyor'));
+          }
+
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+
+          // Filtreleme: tamamlanmamış görevler + bugüne ait tamamlanmış/problemli görevler
+          final filtered = allTasks.where((t) {
+            final d = t.scheduledFor;
+            final taskDay = DateTime(d.year, d.month, d.day);
+            final isToday = taskDay == today;
+            final isDoneOrProblem =
+                t.status == 'done' || t.status == 'problem';
+
+            if (!isDoneOrProblem) {
+              return true;
+            } else {
+              return isToday;
+            }
+          }).toList();
+
+          if (filtered.isEmpty) {
+            return const Center(child: Text('Gösterilecek görev yok'));
+          }
+
+          // Liste görünümü
+          return ListView.builder(
+            padding: const EdgeInsets.only(bottom: 80),
+            itemCount: filtered.length,
+            itemBuilder: (context, index) {
+              final t = filtered[index];
+              return Card(
+                color: _statusColor(t.status),
+                margin: const EdgeInsets.all(8),
+                child: FutureBuilder<TaskTemplate>(
+                  future: api.getTaskTemplate(t.templateId),
+                  builder: (ctx, snapTpl) {
+                    final title = snapTpl.data?.title ??
+                        'Görev #${t.id} (${t.status})';
+                    return FutureBuilder<AppUser>(
+                      future: api.getUser(t.createdById),
+                      builder: (ctx2, snapUser) {
+                        final ownerName =
+                            snapUser.data?.fullName ??
+                                'Hasta yakını yükleniyor...';
+
+                        return ListTile(
+                          title: Text(title),
+                          subtitle: Text(
+                            'Hasta Yakını: $ownerName\n'
+                            'Zaman: ${df.format(t.scheduledFor)}\n'
+                            'Durum: ${t.status}',
+                          ),
+                          isThreeLine: true,
+                          trailing: PopupMenuButton<String>(
+                            // Durum güncelleme menüsü
+                            onSelected: (val) async {
+                              // Menü seçimleriyle görev durumunu güncelle
+                              try {
+                                if (val == 'done') {
+                                  await api.updateTaskStatus(
+                                    taskId: t.id,
+                                    userId: user.id,
+                                    status: 'done',
+                                  );
+                                } else if (val == 'problem') {
+                                  // Problem varsa kullanıcıdan açıklama al
+                                  final msg =
+                                      await _askProblemMessage(context);
+                                  if (msg != null && msg.isNotEmpty) {
+                                    await api.updateTaskStatus(
+                                      taskId: t.id,
+                                      userId: user.id,
+                                      status: 'problem',
+                                      problemMessage: msg,
+                                    );
+                                  }
+                                } else if (val == 'pending') {
+                                  await api.updateTaskStatus(
+                                    taskId: t.id,
+                                    userId: user.id,
+                                    status: 'pending',
+                                  );
+                                }
+                                await _refresh();
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Hata: $e')),
+                                );
+                              }
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'pending',
+                                child: Text('Beklemede'),
+                              ),
+                              PopupMenuItem(
+                                value: 'done',
+                                child: Text('Yapıldı'),
+                              ),
+                              PopupMenuItem(
+                                value: 'problem',
+                                child: Text('Sorun Var'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.logout),
+            label: const Text('Çıkış Yap'),
+            onPressed: () {
+              ref.read(currentUserProvider.notifier).state = null;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _askProblemMessage(BuildContext context) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Sorun Açıklaması'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Sorunu açıklayın...',
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: const Text('İptal'),
+            onPressed: () => Navigator.of(context).pop(null),
+          ),
+          TextButton(
+            child: const Text('Kaydet'),
+            onPressed: () =>
+                Navigator.of(context).pop(controller.text.trim()),
+          ),
+        ],
+      ),
+    );
+  }
+}

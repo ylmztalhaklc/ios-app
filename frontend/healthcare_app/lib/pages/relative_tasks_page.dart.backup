@@ -1,0 +1,592 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../core/api_client.dart';
+import '../core/models.dart';
+import '../main.dart';
+import 'notifications_page.dart';
+import 'login_page.dart';
+
+// Bu dosya: Hasta yakını (relative) tarafından oluşturulan görevlerin yönetim sayfası.
+// - Oluşturulan görevleri listeler, düzenleme ve silme işlemleri sağlar.
+// - Yeni görev oluşturma (TaskCreatePage) ve görev düzenleme dialog'u içerir.
+
+class RelativeTasksPage extends ConsumerStatefulWidget {
+  const RelativeTasksPage({super.key});
+
+  @override
+  ConsumerState<RelativeTasksPage> createState() =>
+      _RelativeTasksPageState();
+}
+
+class _RelativeTasksPageState extends ConsumerState<RelativeTasksPage> {
+  List<TaskInstance> _tasks = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    // API'den kullanıcının oluşturduğu görevleri alır ve state'i günceller
+    final api = ref.read(apiClientProvider);
+    final user = ref.read(currentUserProvider);
+
+    if (user == null) {
+      setState(() {
+        _loading = false;
+        _error = "Kullanıcı bulunamadı";
+      });
+      return;
+    }
+
+    try {
+      final list = await api.getCreatedTasks(user.id);
+      setState(() {
+        _tasks = list;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = "Görevler alınamadı: $e";
+        _loading = false;
+      });
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'done':
+        return Colors.green.shade100;
+      case 'problem':
+        return Colors.red.shade100;
+      case 'pending':
+        return Colors.yellow.shade100;
+      default:
+        return Colors.grey.shade200;
+    }
+  }
+
+  Future<void> _editTask(TaskInstance task) async {
+    final api = ref.read(apiClientProvider);
+
+    // Mevcut açıklamayı template'ten çek
+    final tpl = await api.getTaskTemplate(task.templateId);
+    final descCtrl = TextEditingController(text: tpl.title);
+
+    final result = await showDialog<_EditResult>(
+      context: context,
+      builder: (ctx) {
+        return _EditDialog(
+          initialDateTime: task.scheduledFor,
+          descriptionController: descCtrl,
+        );
+      },
+    );
+
+    if (result == null) return;
+
+    try {
+      // Template başlığını ve görev zamanını güncelle
+      await api.updateTaskTemplate(
+        templateId: task.templateId,
+        title: result.description,
+        description: result.description,
+      );
+      await api.updateTaskTime(
+        taskId: task.id,
+        newTime: result.dateTime.toIso8601String(),
+      );
+
+      await _loadTasks();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hata: $e')),
+      );
+    }
+  }
+
+  Future<void> _deleteTask(TaskInstance task) async {
+    // Kullanıcıdan onay alıp görevi siler, ardından listeyi yeniler
+    final api = ref.read(apiClientProvider);
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Görevi Sil"),
+        content: const Text("Bu görevi silmek istediğine emin misin?"),
+        actions: [
+          TextButton(
+            child: const Text("İptal"),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          TextButton(
+            child: const Text("Sil"),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    try {
+      await api.deleteTask(task.id, user.id);
+      await _loadTasks();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Hata: $e")),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Ana build: görevleri ve durumlarını gösterir; düzenleme/silme sağlar
+    final user = ref.watch(currentUserProvider);
+    final api = ref.read(apiClientProvider);
+    final df = DateFormat('dd.MM.yyyy HH:mm');
+
+    return Scaffold(
+      appBar: AppBar(
+        // Başlık ve bildirim ikonu (unread gösterge)
+        title: Text('Hasta Yakını - ${user?.fullName ?? ""}'),
+        actions: [
+          FutureBuilder<List<NotificationModel>>(
+            future:
+                user == null ? Future.value([]) : api.getNotifications(user.id),
+            builder: (context, snapshot) {
+              final notifs = snapshot.data ?? [];
+              final unread =
+                  notifs.where((n) => n.isRead == false).length;
+
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsPage(),
+                        ),
+                      );
+                      setState(() {});
+                    },
+                  ),
+                  if (unread > 0)
+                    Positioned(
+                      right: 8,
+                      top: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          unread.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+        // İçerik: yükleniyorsa loader, hata varsa hata mesajı, yoksa görev listesi
+        body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : (_error != null
+              ? Center(child: Text(_error!))
+              : _tasks.isEmpty
+                  ? const Center(child: Text('Görev bulunmuyor'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 80),
+                      itemCount: _tasks.length,
+                      itemBuilder: (_, i) {
+                        final t = _tasks[i];
+                        // Her görev için kart: başlık, bakıcı, zaman, durum ve menü
+                        return Card(
+                          color: _statusColor(t.status),
+                          margin: const EdgeInsets.all(8),
+                          child: FutureBuilder<TaskTemplate>(
+                            future: api.getTaskTemplate(t.templateId),
+                            builder: (ctx, snapTpl) {
+                              final title = snapTpl.data?.title ??
+                                  'Görev #${t.id} (${t.status})';
+                              return FutureBuilder<AppUser>(
+                                future: api.getUser(t.assignedToId),
+                                builder: (ctx2, snapUser) {
+                                  final caregiverName =
+                                      snapUser.data?.fullName ??
+                                          'Bakıcı yükleniyor...';
+
+                                  return ListTile(
+                                    title: Text(title),
+                                    subtitle: Text(
+                                      'Bakıcı: $caregiverName\n'
+                                      'Zaman: ${df.format(t.scheduledFor)}\n'
+                                      'Durum: ${t.status}',
+                                    ),
+                                    isThreeLine: true,
+                                    trailing: PopupMenuButton<String>(
+                                      // Düzenle / Sil menüsü
+                                      onSelected: (val) {
+                                        if (val == 'edit') _editTask(t);
+                                        if (val == 'delete') _deleteTask(t);
+                                      },
+                                      itemBuilder: (_) => const [
+                                        PopupMenuItem(
+                                          value: 'edit',
+                                          child: Text('Düzenle'),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'delete',
+                                          child: Text('Sil'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    )),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final created = await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const TaskCreatePage()),
+          );
+          if (created == true) {
+            await _loadTasks();
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.logout),
+            label: const Text('Çıkış Yap'),
+            onPressed: () {
+              ref.read(currentUserProvider.notifier).state = null;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---- TaskCreatePage ve _EditDialog aynı, onlara dokunmadım ----
+}
+
+
+// --------- Yeni görev sayfası (açıklama + bakıcı + tarih/saat) ---------
+
+class TaskCreatePage extends ConsumerStatefulWidget {
+  const TaskCreatePage({super.key});
+
+  @override
+  ConsumerState<TaskCreatePage> createState() => _TaskCreatePageState();
+}
+
+class _TaskCreatePageState extends ConsumerState<TaskCreatePage> {
+  final _descController = TextEditingController();
+  DateTime? _selectedDateTime;
+  int? _selectedCaregiverId;
+
+  List<AppUser> _caregivers = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCaregivers();
+  }
+
+  Future<void> _loadCaregivers() async {
+    final api = ref.read(apiClientProvider);
+    try {
+      final list = await api.getCaregivers();
+      setState(() {
+        _caregivers = list;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Bakıcı listesi alınamadı: $e';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _pickDateTime() async {
+    // Tarih ve saat seçme dialog'larını açar ve seçimi _selectedDateTime'a kaydeder
+    final date = await showDatePicker(
+      context: context,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: DateTime.now(),
+    );
+    if (date == null) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 9, minute: 0),
+    );
+    if (time == null) return;
+
+    setState(() {
+      _selectedDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final api = ref.read(apiClientProvider);
+    final user = ref.read(currentUserProvider);
+
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text(_error!)),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Yeni Görev'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _descController,
+              decoration: const InputDecoration(
+                labelText: 'Görev Açıklaması',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              decoration: const InputDecoration(
+                labelText: 'Hasta Bakıcı Seç',
+                border: OutlineInputBorder(),
+              ),
+              items: _caregivers
+                  .map(
+                    (c) => DropdownMenuItem(
+                      value: c.id,
+                      child: Text(c.fullName),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (val) => setState(() => _selectedCaregiverId = val),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: _pickDateTime,
+                  child: const Text('Tarih & Saat Seç'),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _selectedDateTime == null
+                        ? 'Henüz seçilmedi'
+                        : 'Seçilen: $_selectedDateTime',
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                child: const Text('Görevi Oluştur'),
+                onPressed: () async {
+                  if (_descController.text.trim().isEmpty ||
+                      _selectedCaregiverId == null ||
+                      _selectedDateTime == null ||
+                      user == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Lütfen tüm alanları doldurun'),
+                      ),
+                    );
+                    return;
+                  }
+
+                    try {
+                    final tpl = await api.createTaskTemplate(
+                      title: _descController.text.trim(),
+                      description: _descController.text.trim(),
+                      createdById: user.id,
+                    );
+
+                    await api.createTaskInstance(
+                      templateId: tpl.id,
+                      userId: user.id,
+                      assignedToId: _selectedCaregiverId!,
+                      scheduledFor:
+                          _selectedDateTime!.toIso8601String(),
+                    );
+
+                    if (!mounted) return;
+                    Navigator.pop(context, true);
+                    } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Hata: $e')),
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --------- Düzenleme dialog'u ---------
+
+class _EditResult {
+  final String description;
+  final DateTime dateTime;
+
+  _EditResult(this.description, this.dateTime);
+}
+
+class _EditDialog extends StatefulWidget {
+  final DateTime initialDateTime;
+  final TextEditingController descriptionController;
+
+  const _EditDialog({
+    required this.initialDateTime,
+    required this.descriptionController,
+  });
+
+  @override
+  State<_EditDialog> createState() => _EditDialogState();
+}
+
+class _EditDialogState extends State<_EditDialog> {
+  late DateTime _dt;
+
+  @override
+  void initState() {
+    super.initState();
+    _dt = widget.initialDateTime;
+  }
+
+  Future<void> _pickDateTime() async {
+    // Düzenleme dialog'unda tarih/saat seçimi
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _dt,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date == null) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_dt),
+    );
+    if (time == null) return;
+
+    setState(() {
+      _dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Görevi Düzenle'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: widget.descriptionController,
+            decoration: const InputDecoration(
+              labelText: 'Görev Açıklaması',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: _pickDateTime,
+                child: const Text('Tarih/Saat Seç'),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Yeni: $_dt'),
+              ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          child: const Text('İptal'),
+          onPressed: () => Navigator.pop(context),
+        ),
+        TextButton(
+          child: const Text('Kaydet'),
+          onPressed: () {
+            Navigator.pop(
+              context,
+              _EditResult(
+                widget.descriptionController.text.trim(),
+                _dt,
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}

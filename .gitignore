@@ -1,0 +1,39 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.Python
+backend/pip-log.txt
+backend/pip-delete-this-directory.txt
+backend/.pytest_cache/
+backend/*.egg-info/
+
+# Flutter/Dart
+frontend/healthcare_app/.dart_tool/
+frontend/healthcare_app/.flutter-plugins
+frontend/healthcare_app/.flutter-plugins-dependencies
+frontend/healthcare_app/.packages
+frontend/healthcare_app/.pub-cache/
+frontend/healthcare_app/.pub/
+frontend/healthcare_app/build/
+frontend/healthcare_app/.ios/
+frontend/healthcare_app/.android/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Database
+*.db-journal
+
+# Uploads (gerekirse ekleyin)
+# backend/uploads/
+
+# Logs
+*.log
