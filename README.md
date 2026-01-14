@@ -239,7 +239,6 @@ This project was developed for educational and portfolio purposes.
 
 ## 👨‍💻 Developer
 
-Talha Kılıç
 - GitHub: [ylmztalhaklc](https://github.com/ylmztalhaklc)
 
 ## 📞 Contact

@@ -100,7 +100,7 @@ class TaskInstance {
     return TaskInstance(
       id: json['id'] as int,
       templateId: json['template_id'] as int,
-      title: json['title'] as String,
+      title: (json['title'] as String?) ?? 'İsimsiz Görev',
       description: json['description'] as String?,
       status: json['status'] as String,
       scheduledFor: DateTime.parse(json['scheduled_for'] as String),
